@@ -1,53 +1,24 @@
-version: '3.8'
-
 services:
-  # Development overrides for backend
+  # Development backend - hot reload and dev build
   backend:
     build:
-      context: ./rbarros-backend
       dockerfile: Dockerfile.dev
-    environment:
-      - NODE_ENV=development
-      - PORT=3000
-      - DB_HOST=database
-      - DB_USER=rbarros_user
-      - DB_PASSWORD=rbarros_password
-      - DB_NAME=rbarros_db
-      - SECRET_KEY=dev-secret-key
-      - SECRET_KEY_REFRESH_TOKEN=dev-refresh-secret-key
     volumes:
       - ./rbarros-backend:/app
       - /app/node_modules
     command: npm run dev
 
-  # Development overrides for frontend
+  # Development frontend - hot reload and dev build
   frontend:
     build:
-      context: ./rbarros-frontend
       dockerfile: Dockerfile.dev
-    environment:
-      - VUE_APP_API_URL=http://localhost:3000
-      - NODE_ENV=development
+    ports:
+      - "8080:8080"
     volumes:
       - ./rbarros-frontend:/app
       - /app/node_modules
-    ports:
-      - "8080:8080"
     command: npm run serve
 
-  # Database with development settings
-  database:
-    environment:
-      MYSQL_ROOT_PASSWORD: devpassword
-      MYSQL_DATABASE: rbarros_dev
-      MYSQL_USER: rbarros_dev
-      MYSQL_PASSWORD: devpassword
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_dev_data:/var/lib/mysql
-      - ./database/init:/docker-entrypoint-initdb.d
-
 volumes:
-  mysql_dev_data:
+  mysql_data:
     driver: local 

@@ -32,18 +32,55 @@ Complete Docker deployment setup for the RBarros insurance application with Vue.
    make dev
    
    # Production mode
-   make up
+   make prod
    ```
 
 4. **Access the application**:
    - **Application**: http://localhost (via Nginx)
-   - **Frontend**: http://localhost:8080
+   - **Frontend**: http://localhost:8080 (both environments)
    - **Backend API**: http://localhost:3000
    - **Database**: localhost:3306
 
 ### Production Deployment
 
 The application automatically deploys via GitHub Actions when you push to the `main` branch.
+
+## 🐳 Docker Compose Configuration
+
+This project uses a **clean 3-file setup**:
+
+### `docker-compose.base.yml` (Base Configuration)
+- **Shared configuration** for all environments
+- Defines services without environment-specific settings
+- No port mappings (defined in override files)
+
+### `docker-compose.prod.yml` (Production Overrides)
+- **Production-specific settings**
+- Port mapping: `8080:80` (Nginx serving static files)
+- Used with: `make prod`
+
+### `docker-compose.dev.yml` (Development Overrides)
+- **Development-specific settings**
+- Port mapping: `8080:8080` (Vue CLI dev server)
+- Volume mounts for hot reloading
+- Used with: `make dev`
+
+### Usage:
+```bash
+# Production
+make prod
+# or: docker-compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
+
+# Development
+make dev  
+# or: docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml up -d
+```
+
+**Benefits:**
+- ✅ No port conflicts between environments
+- ✅ Both environments use port 8080 consistently
+- ✅ Clean separation of concerns
+- ✅ Easy to add new environments (staging, testing, etc.)
 
 ## 🔐 GitHub Secrets Configuration
 
@@ -55,7 +92,7 @@ Set these secrets in your GitHub repository settings:
 - `SERVER_PASSWORD` - SSH password
 
 ### Database Configuration
-- `DB_HOST` - Database host (e.g., `localhost` or external DB)
+- `DB_HOST` - Database host (use `database` for Docker MySQL)
 - `DB_USER` - Database username
 - `DB_PASSWORD` - Database password
 - `DB_NAME` - Database name
@@ -360,11 +397,16 @@ sudo dpkg-reconfigure -plow unattended-upgrades
 rbarros-deployment/
 ├── rbarros-frontend/          # Vue.js frontend (git submodule)
 ├── rbarros-backend/           # Node.js backend (git submodule)
+│   └── database/init/         # Database initialization scripts
 ├── nginx/                     # Nginx configuration
+├── scripts/                   # Deployment and setup scripts
 ├── .github/workflows/         # GitHub Actions
-├── docker-compose.yml         # Main Docker configuration
+├── docker-compose.base.yml    # Base Docker configuration
+├── docker-compose.prod.yml    # Production overrides
 ├── docker-compose.dev.yml     # Development overrides
 ├── Makefile                   # Easy commands
+├── .env                       # Environment variables (local)
+├── env.example                # Environment template
 └── README.md                  # This file
 ```
 
@@ -374,19 +416,20 @@ rbarros-deployment/
 # Setup and basic operations
 make setup          # Copy environment template
 make build          # Build Docker images
-make up             # Start production services
+make up             # Start production services (same as 'prod')
+make prod           # Start production services
 make down           # Stop all services
 make restart        # Restart services
 
 # Development
-make dev            # Start with hot reload
+make dev            # Start with development overrides (hot reload)
 make logs           # View all logs
 make logs-backend   # View backend logs only
 make logs-frontend  # View frontend logs only
 
 # Database operations
 make backup         # Backup database
-make restore BACKUP_FILE=backup.sql.gz  # Restore database
+make restore BACKUP_FILE=backup.sql  # Restore database
 
 # Maintenance
 make clean          # Remove containers and volumes
@@ -408,23 +451,29 @@ make shell-database # Access database container
 
 ## 🌐 Environment Variables
 
-The Docker setup uses environment variables with fallbacks:
-
-```yaml
-# Example: Uses GitHub secret in production, fallback for local
-DB_HOST=${DB_HOST:-database}
-```
+The Docker setup uses environment variables for configuration:
 
 ### Local Development (.env file)
 ```env
+# Database Configuration
 DB_HOST=database
 DB_USER=rbarros_user
 DB_PASSWORD=your-local-password
-# ... other variables
+DB_NAME=rbarros_db
+MYSQL_ROOT_PASSWORD=your-root-password
+
+# Application Secrets
+SECRET_KEY=your-jwt-secret-key-minimum-32-characters
+SECRET_KEY_REFRESH_TOKEN=your-refresh-token-secret
+SENDGRID_API_KEY=your-sendgrid-api-key
+WEBHOOK_SECRET=your-webhook-secret
+
+# Frontend Configuration
+VUE_APP_API_URL=http://localhost:3000
 ```
 
 ### Production (GitHub Secrets)
-Environment variables are automatically set from GitHub secrets during deployment.
+Environment variables are automatically set from GitHub secrets during deployment. The production configuration requires all environment variables to be properly set - there are no fallback values for security.
 
 ## 🔧 Development Setup
 
@@ -448,6 +497,13 @@ nano .env
 # Start development environment
 make dev
 ```
+
+### Development vs Production
+
+| Mode | Command | Configuration | Frontend Port | Features |
+|------|---------|---------------|---------------|----------|
+| **Development** | `make dev` | `docker-compose.base.yml` + `docker-compose.dev.yml` | 8080 | Hot reload, volume mounts, dev tools |
+| **Production** | `make prod` | `docker-compose.base.yml` + `docker-compose.prod.yml` | 8080 | Optimized builds, no volume mounts, security hardened |
 
 ### Updating Submodules
 ```bash

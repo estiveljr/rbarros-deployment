@@ -14,9 +14,31 @@ This Docker Compose setup provides a complete containerized environment for the 
 - At least 4GB of available RAM
 - Ports 80, 3000, 3306, and 8080 available on your host machine
 
+## Docker Compose Configuration
+
+This project uses a **clean 3-file setup**:
+
+### `docker-compose.base.yml` (Base Configuration)
+- **Shared configuration** for all environments
+- Defines services without environment-specific settings
+- No port mappings (defined in override files)
+
+### `docker-compose.prod.yml` (Production Overrides)
+- **Production-specific settings**
+- Port mapping: `8080:80` (Nginx serving static files)
+- Used with: `make prod`
+
+### `docker-compose.dev.yml` (Development Overrides)
+- **Development-specific settings**
+- Port mapping: `8080:8080` (Vue CLI dev server)
+- Volume mounts for live code editing and hot reloading
+- Used with: `make dev`
+
 ## Quick Start
 
-1. **Clone and setup environment**:
+### Production Mode (Default)
+
+1. **Setup environment**:
    ```bash
    # Copy the environment template
    cp env.example .env
@@ -25,9 +47,26 @@ This Docker Compose setup provides a complete containerized environment for the 
    nano .env
    ```
 
-2. **Build and start all services**:
+2. **Start production services**:
    ```bash
+   # Using Makefile (recommended)
+   make prod
+   
+   # Or directly with Docker Compose
    docker-compose up -d
+   ```
+
+### Development Mode
+
+1. **Setup environment** (same as above)
+
+2. **Start development services**:
+   ```bash
+   # Using Makefile (recommended)
+   make dev
+   
+   # Or directly with Docker Compose
+   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
    ```
 
 3. **Check service status**:
@@ -35,20 +74,18 @@ This Docker Compose setup provides a complete containerized environment for the 
    docker-compose ps
    ```
 
-4. **View logs**:
-   ```bash
-   # All services
-   docker-compose logs -f
-   
-   # Specific service
-   docker-compose logs -f backend
-   ```
-
 ## Service URLs
 
+### Production Mode
 - **Application**: http://localhost (via Nginx reverse proxy)
-- **Frontend Direct**: http://localhost:8080
+- **Frontend**: http://localhost:8080
 - **Backend API**: http://localhost:3000
+- **Database**: localhost:3306
+
+### Development Mode
+- **Application**: http://localhost (via Nginx reverse proxy)
+- **Frontend**: http://localhost:8080 (with hot reload)
+- **Backend API**: http://localhost:3000 (with hot reload)
 - **Database**: localhost:3306
 
 ## Environment Configuration
@@ -76,7 +113,10 @@ SECRET_KEY_REFRESH_TOKEN=your-refresh-token-secret
 ```env
 SENDGRID_API_KEY=your-sendgrid-api-key
 WEBHOOK_SECRET=your-webhook-secret
+VUE_APP_API_URL=http://localhost:3000
 ```
+
+**Note**: Production configuration requires all environment variables to be set. Development mode provides sensible defaults for most values.
 
 ## Database Setup
 
@@ -84,10 +124,10 @@ WEBHOOK_SECRET=your-webhook-secret
 
 1. **Create database initialization scripts** (optional):
    ```bash
-   mkdir -p database/init
+   mkdir -p rbarros-backend/database/init
    ```
 
-2. **Add SQL initialization files** to `database/init/` directory:
+2. **Add SQL initialization files** to `rbarros-backend/database/init/` directory:
    - Files will be executed in alphabetical order
    - Use `.sql` or `.sh` extensions
 

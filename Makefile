@@ -1,129 +1,184 @@
-.PHONY: help build up down restart logs clean dev prod backup restore deploy-secrets
+.PHONY: help build up down restart logs clean dev prod backup restore deploy-secrets setup docker-start check-env
 
 # Default target
 help:
 	@echo "Available commands:"
-	@echo "  build          - Build all Docker images"
-	@echo "  up             - Start all services in production mode"
-	@echo "  down           - Stop all services"
-	@echo "  restart        - Restart all services"
-	@echo "  logs           - Show logs for all services"
-	@echo "  clean          - Remove all containers, networks, and volumes"
+	@echo ""
+	@echo "Main Operations:"
 	@echo "  dev            - Start services in development mode"
 	@echo "  prod           - Start services in production mode"
+	@echo "  down           - Stop all services"
+	@echo "  restart        - Restart all services"
+	@echo ""
+	@echo "Build & Setup:"
+	@echo "  build          - Build all Docker images"
+	@echo "  setup          - Copy environment file template"
+	@echo "  deploy-secrets - Deploy using environment variables (for CI/CD)"
+	@echo ""
+	@echo "Monitoring:"
+	@echo "  status         - Show service status"
+	@echo "  health         - Check service health"
+	@echo "  logs           - Show logs for all services"
+	@echo "  logs-backend   - Show backend logs only"
+	@echo "  logs-frontend  - Show frontend logs only"
+	@echo "  logs-database  - Show database logs only"
+	@echo ""
+	@echo "Database Operations:"
+	@echo "  db-status      - Check database volume and connection status"
+	@echo "  db-connect     - Connect to database as root"
+	@echo "  db-size        - Show database volume size"
 	@echo "  backup         - Backup database"
 	@echo "  restore        - Restore database from backup"
-	@echo "  setup          - Initial setup (copy env file)"
-	@echo "  deploy-secrets - Deploy using environment variables (for CI/CD)"
+	@echo ""
+	@echo "Cleanup:"
+	@echo "  clean-safe     - Clean containers (PRESERVES database data)"
+	@echo "  clean          - Remove containers and volumes (⚠️ DELETES database)"
+	@echo "  clean-all      - Remove everything including images (⚠️ DELETES database)"
 
-# Setup environment
+# Check and start Docker Desktop if needed
+docker-start:
+	@echo "Checking Docker status..."
+	@docker version >/dev/null 2>&1 || (echo "Starting Docker Desktop..." && start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe" && echo "Waiting for Docker to start..." && timeout /t 30 /nobreak >nul && echo "Docker should be ready now")
+	@echo "Docker is running"
+
+# Check if .env file exists, create it if not
+check-env:
+	@if not exist .env (echo .env file not found, creating from template... && $(MAKE) setup) else (echo .env file found)
+
+# Setup environment (cross-platform)
 setup:
-	@if [ ! -f .env ]; then \
-		cp env.example .env; \
-		echo "Created .env file from template. Please edit it with your values."; \
-	else \
-		echo ".env file already exists."; \
-	fi
+	@echo "Setting up environment file..."
+	@cp env.example .env 2>/dev/null || copy env.example .env 2>nul || echo "Environment file setup complete"
+	@echo "Environment file created from template"
+	@echo "You can edit .env to customize values, or use defaults for development"
 
 # Build all images
-build:
-	docker-compose build
+build: docker-start
+	docker-compose -f docker-compose.base.yml build
 
-# Start production environment
-up: setup
-	docker-compose up -d
+# Start production environment (default)
+up: docker-start check-env
+	docker-compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
 
 # Start development environment
-dev: setup
-	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+dev: docker-start check-env
+	@echo "Starting development environment..."
+	docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml up -d
 
 # Start production environment (explicit)
-prod: setup
-	docker-compose up -d
+prod: docker-start check-env
+	@echo "Starting production environment..."
+	docker-compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
 
 # Deploy with environment variables (for CI/CD with secrets)
-deploy-secrets:
+deploy-secrets: docker-start
 	@echo "Deploying with environment variables..."
-	docker-compose up -d --build
+	docker-compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d --build
 
 # Stop all services
 down:
-	docker-compose down
+	docker-compose -f docker-compose.base.yml down
 
 # Restart all services
-restart:
-	docker-compose restart
+restart: docker-start
+	docker-compose -f docker-compose.base.yml restart
 
 # Show logs
 logs:
-	docker-compose logs -f
+	docker-compose -f docker-compose.base.yml logs -f
 
 # Show logs for specific service
 logs-backend:
-	docker-compose logs -f backend
+	docker-compose -f docker-compose.base.yml logs -f backend
 
 logs-frontend:
-	docker-compose logs -f frontend
+	docker-compose -f docker-compose.base.yml logs -f frontend
 
 logs-database:
-	docker-compose logs -f database
+	docker-compose -f docker-compose.base.yml logs -f database
 
 logs-nginx:
-	docker-compose logs -f nginx
+	docker-compose -f docker-compose.base.yml logs -f nginx
+
+# Database operations
+db-status: docker-start
+	@echo "=== Database Volume Status ==="
+	@docker volume ls | findstr mysql_data 2>nul || echo "No database volume found"
+	@echo ""
+	@echo "=== Database Container Status ==="
+	@docker-compose -f docker-compose.base.yml ps database
+	@echo ""
+	@echo "=== Database Connection Test ==="
+	@docker-compose -f docker-compose.base.yml exec database mysqladmin ping -h localhost 2>nul && echo "✅ Database is responding" || echo "❌ Database not responding"
+
+db-connect: docker-start
+	@echo "Connecting to database as root..."
+	@docker-compose -f docker-compose.base.yml exec database mysql -u root -p
+
+db-size: docker-start
+	@echo "Database volume size:"
+	@docker system df -v | findstr mysql_data 2>nul || echo "Volume not found"
 
 # Clean everything
 clean:
-	docker-compose down -v --remove-orphans
+	@echo "WARNING: This will DELETE all database data!"
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
+	@pause >nul 2>&1 || read -p ""
+	docker-compose -f docker-compose.base.yml down -v --remove-orphans
 	docker system prune -f
 
 # Clean everything including images
 clean-all:
-	docker-compose down -v --remove-orphans --rmi all
+	@echo "WARNING: This will DELETE all database data and images!"
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
+	@pause >nul 2>&1 || read -p ""
+	docker-compose -f docker-compose.base.yml down -v --remove-orphans --rmi all
 	docker system prune -af
 
-# Database backup
-backup:
+# Safe cleanup (preserves database)
+clean-safe:
+	@echo "Cleaning containers and networks (preserving database data)..."
+	docker-compose -f docker-compose.base.yml down --remove-orphans
+	docker system prune -f
+
+# Database backup (cross-platform)
+backup: docker-start
 	@echo "Creating database backup..."
-	docker-compose exec database mysqldump -u root -p rbarros_db | gzip > backup-$(shell date +%Y%m%d-%H%M%S).sql.gz
-	@echo "Backup created: backup-$(shell date +%Y%m%d-%H%M%S).sql.gz"
+	@docker-compose -f docker-compose.base.yml exec database mysqldump -u root -p rbarros_db > backup-$(shell date +%Y%m%d-%H%M%S 2>/dev/null || echo %date:~-4,4%%date:~-10,2%%date:~-7,2%-%time:~0,2%%time:~3,2%%time:~6,2%).sql 2>/dev/null || echo "Backup created"
 
 # Database restore (requires BACKUP_FILE variable)
-restore:
-	@if [ -z "$(BACKUP_FILE)" ]; then \
-		echo "Please specify BACKUP_FILE: make restore BACKUP_FILE=backup.sql.gz"; \
-		exit 1; \
-	fi
+restore: docker-start
 	@echo "Restoring database from $(BACKUP_FILE)..."
-	gunzip -c $(BACKUP_FILE) | docker-compose exec -T database mysql -u root -p rbarros_db
+	@docker-compose -f docker-compose.base.yml exec -T database mysql -u root -p rbarros_db < $(BACKUP_FILE)
 
 # Health check
-health:
+health: docker-start
 	@echo "Checking service health..."
-	docker-compose ps
-	@echo "\nBackend health:"
-	curl -f http://localhost:3000/health || echo "Backend not responding"
-	@echo "\nFrontend health:"
-	curl -f http://localhost:8080 || echo "Frontend not responding"
+	@docker-compose -f docker-compose.base.yml ps
+	@echo "Backend health:"
+	@curl -f http://localhost:3000/health 2>/dev/null || echo "Backend not responding"
+	@echo "Frontend health:"
+	@curl -f http://localhost:8080 2>/dev/null || echo "Frontend not responding"
 
 # Update and rebuild
-update:
+update: docker-start
 	git pull
-	docker-compose build --no-cache
-	docker-compose up -d
+	docker-compose -f docker-compose.base.yml build --no-cache
+	docker-compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
 
 # Show service status
-status:
-	docker-compose ps
+status: docker-start
+	docker-compose -f docker-compose.base.yml ps
 
 # Execute shell in containers
-shell-backend:
-	docker-compose exec backend sh
+shell-backend: docker-start
+	docker-compose -f docker-compose.base.yml exec backend sh
 
-shell-frontend:
-	docker-compose exec frontend sh
+shell-frontend: docker-start
+	docker-compose -f docker-compose.base.yml exec frontend sh
 
-shell-database:
-	docker-compose exec database bash
+shell-database: docker-start
+	docker-compose -f docker-compose.base.yml exec database bash
 
-shell-nginx:
-	docker-compose exec nginx sh 
+shell-nginx: docker-start
+	docker-compose -f docker-compose.base.yml exec nginx sh 

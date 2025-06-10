@@ -1,29 +1,10 @@
-version: '3.8'
-
 services:
-  # Production database with secrets
-  database:
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-
-  # Production backend with GitHub secrets
+  # Production backend - only override NODE_ENV
   backend:
     environment:
       - NODE_ENV=production
-      - PORT=3000
-      - DB_HOST=${DB_HOST:-database}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - SECRET_KEY=${SECRET_KEY}
-      - SECRET_KEY_REFRESH_TOKEN=${SECRET_KEY_REFRESH_TOKEN}
-      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
-      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
 
-  # Production frontend
+  # Production frontend - only add port mapping
   frontend:
-    environment:
-      - VUE_APP_API_URL=${VUE_APP_API_URL:-http://localhost:3000}
+    ports:
+      - "8080:80" 
