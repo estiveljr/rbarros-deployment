@@ -54,51 +54,51 @@ setup:
 
 # Build all images
 build: docker-start
-	docker-compose -f docker-compose.base.yml build
+	docker-compose -f docker-compose.dev.yml build
 
-# Start production environment (default)
+# Start development environment (default)
 up: docker-start check-env
-	docker-compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
+	docker-compose -f docker-compose.dev.yml up -d
 
-# Start development environment
+# Start development environment (explicit)
 dev: docker-start check-env
 	@echo "Starting development environment..."
-	docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml up -d
+	docker-compose -f docker-compose.dev.yml up -d
 
-# Start production environment (explicit)
+# Start production environment
 prod: docker-start check-env
 	@echo "Starting production environment..."
-	docker-compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
+	docker-compose -f docker-compose.dev.yml -f docker-compose.prod.yml up -d
 
 # Deploy with environment variables (for CI/CD with secrets)
 deploy-secrets: docker-start
 	@echo "Deploying with environment variables..."
-	docker-compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d --build
+	docker-compose -f docker-compose.dev.yml -f docker-compose.prod.yml up -d --build
 
 # Stop all services
 down:
-	docker-compose -f docker-compose.base.yml down
+	docker-compose -f docker-compose.dev.yml down
 
 # Restart all services
 restart: docker-start
-	docker-compose -f docker-compose.base.yml restart
+	docker-compose -f docker-compose.dev.yml restart
 
 # Show logs
 logs:
-	docker-compose -f docker-compose.base.yml logs -f
+	docker-compose -f docker-compose.dev.yml logs -f
 
 # Show logs for specific service
 logs-backend:
-	docker-compose -f docker-compose.base.yml logs -f backend
+	docker-compose -f docker-compose.dev.yml logs -f backend
 
 logs-frontend:
-	docker-compose -f docker-compose.base.yml logs -f frontend
+	docker-compose -f docker-compose.dev.yml logs -f frontend
 
 logs-database:
-	docker-compose -f docker-compose.base.yml logs -f database
+	docker-compose -f docker-compose.dev.yml logs -f database
 
 logs-nginx:
-	docker-compose -f docker-compose.base.yml logs -f nginx
+	docker-compose -f docker-compose.dev.yml logs -f nginx
 
 # Database operations
 db-status: docker-start
@@ -106,14 +106,14 @@ db-status: docker-start
 	@docker volume ls | findstr mysql_data 2>nul || echo "No database volume found"
 	@echo ""
 	@echo "=== Database Container Status ==="
-	@docker-compose -f docker-compose.base.yml ps database
+	@docker-compose -f docker-compose.dev.yml ps database
 	@echo ""
 	@echo "=== Database Connection Test ==="
-	@docker-compose -f docker-compose.base.yml exec database mysqladmin ping -h localhost 2>nul && echo "✅ Database is responding" || echo "❌ Database not responding"
+	@docker-compose -f docker-compose.dev.yml exec database mysqladmin ping -h localhost 2>nul && echo "✅ Database is responding" || echo "❌ Database not responding"
 
 db-connect: docker-start
 	@echo "Connecting to database as root..."
-	@docker-compose -f docker-compose.base.yml exec database mysql -u root -p
+	@docker-compose -f docker-compose.dev.yml exec database mysql -u root -p
 
 db-size: docker-start
 	@echo "Database volume size:"
@@ -124,7 +124,7 @@ clean:
 	@echo "WARNING: This will DELETE all database data!"
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@pause >nul 2>&1 || read -p ""
-	docker-compose -f docker-compose.base.yml down -v --remove-orphans
+	docker-compose -f docker-compose.dev.yml down -v --remove-orphans
 	docker system prune -f
 
 # Clean everything including images
@@ -132,53 +132,53 @@ clean-all:
 	@echo "WARNING: This will DELETE all database data and images!"
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@pause >nul 2>&1 || read -p ""
-	docker-compose -f docker-compose.base.yml down -v --remove-orphans --rmi all
+	docker-compose -f docker-compose.dev.yml down -v --remove-orphans --rmi all
 	docker system prune -af
 
 # Safe cleanup (preserves database)
 clean-safe:
 	@echo "Cleaning containers and networks (preserving database data)..."
-	docker-compose -f docker-compose.base.yml down --remove-orphans
+	docker-compose -f docker-compose.dev.yml down --remove-orphans
 	docker system prune -f
 
 # Database backup (cross-platform)
 backup: docker-start
 	@echo "Creating database backup..."
-	@docker-compose -f docker-compose.base.yml exec database mysqldump -u root -p rbarros_db > backup-$(shell date +%Y%m%d-%H%M%S 2>/dev/null || echo %date:~-4,4%%date:~-10,2%%date:~-7,2%-%time:~0,2%%time:~3,2%%time:~6,2%).sql 2>/dev/null || echo "Backup created"
+	@docker-compose -f docker-compose.dev.yml exec database mysqldump -u root -p rbarros_db > backup-$(shell date +%Y%m%d-%H%M%S 2>/dev/null || echo %date:~-4,4%%date:~-10,2%%date:~-7,2%-%time:~0,2%%time:~3,2%%time:~6,2%).sql 2>/dev/null || echo "Backup created"
 
 # Database restore (requires BACKUP_FILE variable)
 restore: docker-start
 	@echo "Restoring database from $(BACKUP_FILE)..."
-	@docker-compose -f docker-compose.base.yml exec -T database mysql -u root -p rbarros_db < $(BACKUP_FILE)
+	@docker-compose -f docker-compose.dev.yml exec -T database mysql -u root -p rbarros_db < $(BACKUP_FILE)
 
 # Health check
 health: docker-start
 	@echo "Checking service health..."
-	@docker-compose -f docker-compose.base.yml ps
+	@docker-compose -f docker-compose.dev.yml ps
 	@echo "Backend health:"
 	@curl -f http://localhost:3000/health 2>/dev/null || echo "Backend not responding"
 	@echo "Frontend health:"
-	@curl -f http://localhost:8080 2>/dev/null || echo "Frontend not responding"
+	@curl -f http://localhost:8081 2>/dev/null || echo "Frontend not responding"
 
 # Update and rebuild
 update: docker-start
 	git pull
-	docker-compose -f docker-compose.base.yml build --no-cache
-	docker-compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
+	docker-compose -f docker-compose.dev.yml build --no-cache
+	docker-compose -f docker-compose.dev.yml -f docker-compose.prod.yml up -d
 
 # Show service status
 status: docker-start
-	docker-compose -f docker-compose.base.yml ps
+	docker-compose -f docker-compose.dev.yml ps
 
 # Execute shell in containers
 shell-backend: docker-start
-	docker-compose -f docker-compose.base.yml exec backend sh
+	docker-compose -f docker-compose.dev.yml exec backend sh
 
 shell-frontend: docker-start
-	docker-compose -f docker-compose.base.yml exec frontend sh
+	docker-compose -f docker-compose.dev.yml exec frontend sh
 
 shell-database: docker-start
-	docker-compose -f docker-compose.base.yml exec database bash
+	docker-compose -f docker-compose.dev.yml exec database bash
 
 shell-nginx: docker-start
-	docker-compose -f docker-compose.base.yml exec nginx sh 
+	docker-compose -f docker-compose.dev.yml exec nginx sh 

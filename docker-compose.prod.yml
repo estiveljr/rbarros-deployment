@@ -1,10 +1,18 @@
 services:
-  # Production backend - only override NODE_ENV
+  # Production backend overrides
   backend:
+    build:
+      dockerfile: Dockerfile  # Use production Dockerfile
     environment:
       - NODE_ENV=production
+    volumes: []  # Remove volume mounts for production
+    command: npm start  # Production command
 
-  # Production frontend - only add port mapping
+  # Production frontend overrides  
   frontend:
+    build:
+      dockerfile: Dockerfile  # Use production Dockerfile
     ports:
-      - "8080:80" 
+      - "8080:80"  # Production port mapping
+    volumes: []  # Remove volume mounts for production
+    command: nginx -g 'daemon off;'  # Production command 
