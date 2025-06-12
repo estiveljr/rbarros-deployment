@@ -28,8 +28,7 @@ services:
       dockerfile: Dockerfile  # Use production Dockerfile
     container_name: rbarros-backend-prod
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    # No external ports - nginx handles all external traffic
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -62,8 +61,7 @@ services:
         - VUE_APP_API_URL=${VUE_APP_API_URL}
     container_name: rbarros-frontend-prod
     restart: unless-stopped
-    ports:
-      - "8080:8080"  
+    # No external ports - nginx handles all external traffic
     depends_on:
       - backend
     networks:
