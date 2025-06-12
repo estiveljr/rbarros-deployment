@@ -79,6 +79,10 @@ deploy-secrets: docker-start
 down:
 	docker-compose -f docker-compose.dev.yml down
 
+# Stop production services
+down-prod:
+	docker-compose -f docker-compose.prod.yml down
+
 # Restart all services
 restart: docker-start
 	docker-compose -f docker-compose.dev.yml restart
