@@ -20,12 +20,19 @@ jobs:
           envs: NODE_ENV,DB_HOST,DB_USER,DB_PASSWORD,DB_NAME,SECRET_KEY,SECRET_KEY_REFRESH_TOKEN,SENDGRID_API_KEY,WEBHOOK_SECRET,MYSQL_ROOT_PASSWORD,VUE_APP_API_URL
           script: |
             cd ~/rbarros-deployment
+            
+            # Debug: Check if environment variables are already available
+            echo "Checking environment variables:"
+            echo "DB_USER is: $DB_USER"
+            echo "SECRET_KEY is set: $([ -n "$SECRET_KEY" ] && echo "YES" || echo "NO")"
+            
             # key must be set in the .ssh/config file as github-rbarros-deploy
             git remote set-url origin git@github-rbarros-deploy:estiveljr/rbarros-deployment.git
             git pull --recurse-submodules
-            sudo make down-prod
-            sudo make deploy-secrets
+            sudo -E make down-prod
+            sudo -E make deploy-secrets
             echo "✅ Deployment complete!"
+
         env:
           NODE_ENV: production
           DB_HOST: ${{ secrets.DB_HOST }}
