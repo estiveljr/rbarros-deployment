@@ -29,8 +29,8 @@ jobs:
             # key must be set in the .ssh/config file as github-rbarros-deploy
             git remote set-url origin git@github-rbarros-deploy:estiveljr/rbarros-deployment.git
             git pull --recurse-submodules
-            sudo -E make down-prod
-            sudo -E make deploy-secrets
+            sudo -E docker-compose -f docker-compose.prod.yml down
+            sudo -E docker-compose -f docker-compose.prod.yml up -d --build
             echo "✅ Deployment complete!"
 
         env:
