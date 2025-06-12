@@ -163,7 +163,7 @@ clean-all:
 else
 clean-all:
 	@echo "WARNING: This will DELETE all database data and images!"
-	@read -p "Press Enter to continue..."
+	@read -p "Press Enter to continue..." dummy
 	docker-compose -f docker-compose.dev.yml down -v --remove-orphans --rmi all
 	docker system prune -af
 endif

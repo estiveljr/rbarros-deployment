@@ -25,7 +25,7 @@ services:
   backend:
     build:
       context: ./rbarros-backend
-      dockerfile: Dockerfile  # Use production Dockerfile
+      dockerfile: Dockerfile  # Use production Dockerfile.
     container_name: rbarros-backend-prod
     restart: unless-stopped
     # No external ports - nginx handles all external traffic
