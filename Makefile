@@ -73,7 +73,7 @@ prod: docker-start check-env
 # Deploy with environment variables (for CI/CD with secrets)
 deploy-secrets: docker-start
 	@echo "Deploying with environment variables..."
-	docker-compose -f docker-compose.dev.yml -f docker-compose.prod.yml up -d --build
+	docker-compose -f docker-compose.prod.yml up -d --build
 
 # Stop all services
 down:
