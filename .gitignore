@@ -71,3 +71,6 @@ pids/
 *.pem
 *.key
 *.crt
+
+# pdf readme files
+*.pdf

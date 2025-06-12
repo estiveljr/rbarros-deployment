@@ -29,20 +29,16 @@ Go to your GitHub repository → Settings → Secrets and variables → Actions 
 - `SERVER_PASSWORD`: SSH password
 - `SERVER_PORT`: SSH port (optional, defaults to 22)
 
-### Database Secrets
+### Env file
 - `DB_HOST`: Database host (`database` for Docker Compose setup)
 - `DB_USER`: Database username  
 - `DB_PASSWORD`: Database password
 - `DB_NAME`: Database name (e.g., `rbarrosassurance`)
 - `MYSQL_ROOT_PASSWORD`: MySQL root password
-
-### Application Secrets
 - `SECRET_KEY`: JWT secret key for authentication
 - `SECRET_KEY_REFRESH_TOKEN`: JWT refresh token secret
 - `SENDGRID_API_KEY`: SendGrid API key for email services
 - `WEBHOOK_SECRET`: Webhook secret for secure communications
-
-### Frontend Configuration
 - `VUE_APP_API_URL`: Frontend API URL (e.g., `https://yourdomain.com/api`)
 
 ## 🏗️ Production Server Setup

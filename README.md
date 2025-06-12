@@ -37,48 +37,45 @@ Complete Docker deployment setup for the RBarros insurance application with Vue.
 
 4. **Access the application**:
    - **Application**: http://localhost (via Nginx)
-   - **Frontend**: http://localhost:8080 (both environments)
+   - **Frontend**: http://localhost:8080 (dev mode)
    - **Backend API**: http://localhost:3000
    - **Database**: localhost:3306
 
 ### Production Deployment
 
-The application automatically deploys via GitHub Actions when you push to the `main` branch.
+The application automatically deploys via GitHub Actions when you push to the `master` branch.
 
 ## 🐳 Docker Compose Configuration
 
-This project uses a **clean 3-file setup**:
+This project uses a **2-file setup**:
 
-### `docker-compose.base.yml` (Base Configuration)
-- **Shared configuration** for all environments
-- Defines services without environment-specific settings
-- No port mappings (defined in override files)
-
-### `docker-compose.prod.yml` (Production Overrides)
+### `docker-compose.prod.yml` (Production)
 - **Production-specific settings**
-- Port mapping: `8080:80` (Nginx serving static files)
+- Nginx serves on ports 80/443
+- No direct port mapping for frontend/backend (Nginx handles all traffic)
 - Used with: `make prod`
 
-### `docker-compose.dev.yml` (Development Overrides)
+### `docker-compose.dev.yml` (Development)
 - **Development-specific settings**
-- Port mapping: `8080:8080` (Vue CLI dev server)
-- Volume mounts for hot reloading
+- Frontend exposed on port 8080 (hot reload)
+- Backend exposed on port 3000
+- Nginx reverse proxy on ports 80/443
 - Used with: `make dev`
 
 ### Usage:
 ```bash
 # Production
 make prod
-# or: docker-compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
+# or: docker-compose -f docker-compose.prod.yml up -d --build
 
 # Development
 make dev  
-# or: docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml up -d
+# or: docker-compose -f docker-compose.dev.yml up -d
 ```
 
 **Benefits:**
 - ✅ No port conflicts between environments
-- ✅ Both environments use port 8080 consistently
+- ✅ Consistent port usage for frontend and backend
 - ✅ Clean separation of concerns
 - ✅ Easy to add new environments (staging, testing, etc.)
 
@@ -89,7 +86,8 @@ Set these secrets in your GitHub repository settings:
 ### Server Access
 - `SERVER_HOST` - Your production server IP/domain
 - `SERVER_USERNAME` - SSH username
-- `SERVER_PASSWORD` - SSH password
+- `SERVER_SSH_KEY` - SSH private key (not password)
+- `SERVER_PORT` - SSH port (optional, default 22)
 
 ### Database Configuration
 - `DB_HOST` - Database host (use `database` for Docker MySQL)
@@ -256,31 +254,11 @@ server {
 
 ### 6. Setup Database (Choose One)
 
-#### Option A: Use Docker MySQL (Recommended for simplicity)
+#### Use Docker MySQL (Recommended for simplicity)
 ```bash
 # Database will be created automatically by Docker Compose
 # Data persists in Docker volume
-```
 
-#### Option B: External MySQL Database
-```bash
-# Install MySQL
-sudo apt install mysql-server -y
-
-# Secure installation
-sudo mysql_secure_installation
-
-# Create database and user
-sudo mysql -u root -p
-```
-
-```sql
-CREATE DATABASE rbarros_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'rbarros_user'@'%' IDENTIFIED BY 'your-secure-password';
-GRANT ALL PRIVILEGES ON rbarros_db.* TO 'rbarros_user'@'%';
-FLUSH PRIVILEGES;
-EXIT;
-```
 
 ### 7. Configure GitHub Actions Deployment Path
 
@@ -288,8 +266,8 @@ Update your GitHub Actions workflow (`.github/workflows/workflow.yaml`) with the
 
 ```yaml
 script: |
-  cd /opt/rbarros-deployment  # Update this path
-  git pull origin main
+  cd ~/rbarros-deployment  # Update this path
+  git pull --recurse-submodules
   # ... rest of the script
 ```
 
@@ -297,22 +275,13 @@ script: |
 
 ```bash
 # Manual test deployment
-cd /opt/rbarros-deployment
+cd ~/rbarros-deployment
 
-# Set test environment variables
-export DB_HOST=database
-export DB_USER=rbarros_user
-export DB_PASSWORD=your-password
-export DB_NAME=rbarros_db
-export SECRET_KEY=your-secret-key-here
-export SECRET_KEY_REFRESH_TOKEN=your-refresh-secret
-export SENDGRID_API_KEY=your-sendgrid-key
-export WEBHOOK_SECRET=your-webhook-secret
-export MYSQL_ROOT_PASSWORD=your-root-password
-export VUE_APP_API_URL=https://yourdomain.com
+# Set test environment variables in .env file
+nano .env
 
 # Deploy
-make deploy-secrets
+make prod
 
 # Check status
 make status
@@ -350,7 +319,7 @@ echo "0 2 * * * /opt/backup-rbarros.sh" | sudo crontab -
 sudo apt install htop iotop nethogs -y
 
 # Check Docker logs
-docker-compose logs -f
+docker-compose -f docker-compose.prod.yml logs -f
 
 # Monitor resources
 htop
@@ -367,9 +336,9 @@ df -h
 sudo apt update && sudo apt upgrade -y
 
 # Update Docker images
-cd /opt/rbarros-deployment
-docker-compose pull
-make deploy-secrets
+cd ~/rbarros-deployment
+docker-compose -f docker-compose.prod.yml pull
+make prod
 
 # Clean up old images
 docker system prune -f
@@ -401,9 +370,8 @@ rbarros-deployment/
 ├── nginx/                     # Nginx configuration
 ├── scripts/                   # Deployment and setup scripts
 ├── .github/workflows/         # GitHub Actions
-├── docker-compose.base.yml    # Base Docker configuration
-├── docker-compose.prod.yml    # Production overrides
-├── docker-compose.dev.yml     # Development overrides
+├── docker-compose.prod.yml    # Production Docker configuration
+├── docker-compose.dev.yml     # Development Docker configuration
 ├── Makefile                   # Easy commands
 ├── .env                       # Environment variables (local)
 ├── env.example                # Environment template
@@ -415,39 +383,40 @@ rbarros-deployment/
 ```bash
 # Setup and basic operations
 make setup          # Copy environment template
-make build          # Build Docker images
-make up             # Start production services (same as 'prod')
+make build          # Build Docker images (dev)
+make up             # Start development services (same as 'dev')
 make prod           # Start production services
-make down           # Stop all services
-make restart        # Restart services
+make down           # Stop all dev services
+make down-prod      # Stop all production services
+make restart        # Restart dev services
 
 # Development
 make dev            # Start with development overrides (hot reload)
-make logs           # View all logs
-make logs-backend   # View backend logs only
-make logs-frontend  # View frontend logs only
+make logs           # View all logs (dev)
+make logs-backend   # View backend logs only (dev)
+make logs-frontend  # View frontend logs only (dev)
 
 # Database operations
 make backup         # Backup database
 make restore BACKUP_FILE=backup.sql  # Restore database
 
 # Maintenance
-make clean          # Remove containers and volumes
-make health         # Check service health
-make status         # Show service status
+make clean          # Remove containers and volumes (dev)
+make health         # Check service health (dev)
+make status         # Show service status (dev)
 
 # Access containers
-make shell-backend  # Access backend container
-make shell-frontend # Access frontend container
-make shell-database # Access database container
+make shell-backend  # Access backend container (dev)
+make shell-frontend # Access frontend container (dev)
+make shell-database # Access database container (dev)
 ```
 
 ## 🔄 CI/CD Workflow
 
-1. **Push to main branch** → Triggers GitHub Actions
-2. **SSH to production server** → Pulls latest code
-3. **Export GitHub secrets** → As environment variables
-4. **Deploy with Docker** → `make deploy-secrets`
+1. **Push to master branch** → Triggers GitHub Actions
+2. **SSH to production server** → Pulls latest code and submodules
+3. **.env file must exist on server** → All environment variables are loaded from this file
+4. **Deploy with Docker Compose** → `docker-compose -f docker-compose.prod.yml up -d --build`
 
 ## 🌐 Environment Variables
 
@@ -472,8 +441,8 @@ WEBHOOK_SECRET=your-webhook-secret
 VUE_APP_API_URL=http://localhost:3000
 ```
 
-### Production (GitHub Secrets)
-Environment variables are automatically set from GitHub secrets during deployment. The production configuration requires all environment variables to be properly set - there are no fallback values for security.
+### Production (.env file on server)
+All environment variables must be set in the `.env` file on the server. The production configuration requires all environment variables to be properly set - there are no fallback values for security.
 
 ## 🔧 Development Setup
 
@@ -500,10 +469,10 @@ make dev
 
 ### Development vs Production
 
-| Mode | Command | Configuration | Frontend Port | Features |
-|------|---------|---------------|---------------|----------|
-| **Development** | `make dev` | `docker-compose.base.yml` + `docker-compose.dev.yml` | 8080 | Hot reload, volume mounts, dev tools |
-| **Production** | `make prod` | `docker-compose.base.yml` + `docker-compose.prod.yml` | 8080 | Optimized builds, no volume mounts, security hardened |
+| Mode | Command | Compose File | Frontend Port | Features |
+|------|---------|-------------|---------------|----------|
+| **Development** | `make dev` | `docker-compose.dev.yml` | 8080 | Hot reload, volume mounts, dev tools |
+| **Production** | `make prod` | `docker-compose.prod.yml` | 80/443 (via Nginx) | Optimized builds, no volume mounts, security hardened |
 
 ### Updating Submodules
 ```bash
@@ -588,7 +557,7 @@ make logs-database
 1. Make changes to submodules in their respective repositories
 2. Update submodule references in this repository
 3. Test locally with `make dev`
-4. Push to main for automatic deployment
+4. Push to master for automatic deployment
 
 ## 📞 Support
 
