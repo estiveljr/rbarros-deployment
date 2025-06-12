@@ -68,7 +68,7 @@ dev: docker-start check-env
 # Start production environment
 prod: docker-start check-env
 	@echo "Starting production environment..."
-	docker-compose -f docker-compose.dev.yml -f docker-compose.prod.yml up -d
+	docker-compose -f docker-compose.prod.yml up -d
 
 # Deploy with environment variables (for CI/CD with secrets)
 deploy-secrets: docker-start
