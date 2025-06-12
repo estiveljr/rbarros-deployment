@@ -20,6 +20,7 @@ jobs:
           envs: NODE_ENV,DB_HOST,DB_USER,DB_PASSWORD,DB_NAME,SECRET_KEY,SECRET_KEY_REFRESH_TOKEN,SENDGRID_API_KEY,WEBHOOK_SECRET,MYSQL_ROOT_PASSWORD,VUE_APP_API_URL
           script: |
             cd ~/rbarros-deployment
+            git remote set-url origin https://github.com/estiveljr/rbarros-deployment.git
             git pull --recurse-submodules origin master
             docker-compose -f docker-compose.prod.yml down
             docker-compose -f docker-compose.prod.yml up -d --build
