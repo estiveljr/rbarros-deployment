@@ -1,7 +1,14 @@
 .PHONY: help build up down restart logs clean dev prod backup restore deploy-secrets setup docker-start check-env
 
+ifeq ($(OS),Windows_NT)
+OS_TYPE := windows
+else
+OS_TYPE := unix
+endif
+
 # Default target
 help:
+	@echo "Detected OS: $(OS_TYPE)"
 	@echo "Available commands:"
 	@echo ""
 	@echo "Main Operations:"
@@ -36,14 +43,28 @@ help:
 	@echo "  clean-all      - Remove everything including images (⚠️ DELETES database)"
 
 # Check and start Docker Desktop if needed
+ifeq ($(OS_TYPE),windows)
 docker-start:
 	@echo "Checking Docker status..."
 	@docker version >/dev/null 2>&1 || (echo "Starting Docker Desktop..." && start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe" && echo "Waiting for Docker to start..." && timeout /t 30 /nobreak >nul && echo "Docker should be ready now")
 	@echo "Docker is running"
+else
+docker-start:
+	@echo "Checking Docker status..."
+	@docker version >/dev/null 2>&1 || (echo "Starting Docker service..." && (sudo systemctl start docker 2>/dev/null || echo "Could not start Docker service automatically. Please start Docker manually.") && echo "Waiting for Docker to start..." && sleep 30 && echo "Docker should be ready now")
+	@echo "Docker is running"
+endif
 
 # Check if .env file exists, create it if not
+ifeq ($(OS_TYPE),windows)
 check-env:
 	@if not exist .env (echo .env file not found, creating from template... && $(MAKE) setup) else (echo .env file found)
+else
+check-env:
+	@echo "Checking .env file..."
+	@test -f .env && echo ".env file found" || (echo ".env file not found, creating from template..." && $(MAKE) setup)
+endif
+
 
 # Setup environment (cross-platform)
 setup:
@@ -132,12 +153,20 @@ clean:
 	docker system prune -f
 
 # Clean everything including images
+ifeq ($(OS_TYPE),windows)
 clean-all:
 	@echo "WARNING: This will DELETE all database data and images!"
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@pause >nul 2>&1 || read -p ""
 	docker-compose -f docker-compose.dev.yml down -v --remove-orphans --rmi all
 	docker system prune -af
+else
+clean-all:
+	@echo "WARNING: This will DELETE all database data and images!"
+	@read -p "Press Enter to continue..."
+	docker-compose -f docker-compose.dev.yml down -v --remove-orphans --rmi all
+	docker system prune -af
+endif
 
 # Safe cleanup (preserves database)
 clean-safe:
