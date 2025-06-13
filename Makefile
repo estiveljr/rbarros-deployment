@@ -18,7 +18,7 @@ help:
 	@echo "  restart        - Restart all services"
 	@echo ""
 	@echo "Build & Setup:"
-	@echo "  build          - Build all Docker images"
+	@echo "  build-dev      - Build all Docker images"
 	@echo "  setup          - Copy environment file template"
 	@echo "  deploy-secrets - Deploy using environment variables (for CI/CD)"
 	@echo ""
@@ -74,12 +74,8 @@ setup:
 	@echo "You can edit .env to customize values, or use defaults for development"
 
 # Build all images
-build: docker-start
+build-dev: docker-start
 	docker-compose -f docker-compose.dev.yml build
-
-# Start development environment (default)
-up: docker-start check-env
-	docker-compose -f docker-compose.dev.yml up -d
 
 # Start development environment (explicit)
 dev: docker-start check-env

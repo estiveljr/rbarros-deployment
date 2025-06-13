@@ -62,6 +62,11 @@ services:
       - "8080:8080"  # Development port
     environment:
       - VUE_APP_API_URL=${VUE_APP_API_URL}
+      - CHOKIDAR_USEPOLLING=true     # Enable file watching in Docker
+      - CHOKIDAR_INTERVAL=300        # Faster polling interval (300ms)
+      - WATCHPACK_POLLING=true       # Enable webpack polling
+      - WDS_SOCKET_HOST=localhost    # WebSocket host for hot reload
+      - WDS_SOCKET_PORT=8080         # WebSocket port for hot reload
     volumes:
       - ./rbarros-frontend:/app
       - /app/node_modules
