@@ -1,6 +1,9 @@
 [submodule "rbarros-backend"]
 	path = rbarros-backend
-	url = https://github.com/estiveljr/rbarros-backend
+    url = git@github-rbarros-backend:estiveljr/rbarros-backend.git
 [submodule "rbarros-frontend"]
 	path = rbarros-frontend
-	url = https://github.com/estiveljr/rbarros-frontend
+    url = git@github-rbarros-frontend:estiveljr/rbarros-frontend.git
+
+
+
