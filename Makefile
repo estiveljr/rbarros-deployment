@@ -80,12 +80,12 @@ build-dev: docker-start
 # Start development environment (explicit)
 dev: docker-start check-env
 	@echo "Starting development environment..."
-	docker-compose -f docker-compose.dev.yml up -d
+	docker-compose -f docker-compose.dev.yml up -d --no-cache
 
 # Start production environment
 prod: docker-start check-env
 	@echo "Starting production environment..."
-	docker-compose -f docker-compose.prod.yml up -d
+	docker-compose -f docker-compose.prod.yml up -d --no-cache
 
 # Deploy with environment variables (for CI/CD with secrets)
 deploy-secrets: docker-start
