@@ -72,5 +72,11 @@ pids/
 *.key
 *.crt
 
+# github keys
+github_to_ec2
+github_to_ec2.pub
+*.pub
+
 # pdf readme files
 *.pdf
+
