@@ -34,6 +34,11 @@ jobs:
             # key must be set in the .ssh/config file as github-rbarros-deploy
             git remote set-url origin git@github-rbarros-deploy:estiveljr/rbarros-deployment.git
             git pull --recurse-submodules
+
+            #Cleaning containers and networks (preserving database data)
+            sudo docker-compose -f docker-compose.prod.yml down --remove-orphans
+            sudo docker-compose -f docker-compose.dev.yml down --remove-orphans
+            sudo docker system prune -f
             
             # Stop containers
             sudo docker-compose -f docker-compose.prod.yml down
