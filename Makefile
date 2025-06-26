@@ -75,7 +75,7 @@ setup:
 
 # Build all images
 build-dev: docker-start
-	docker-compose -f docker-compose.dev.yml build
+	docker-compose -f docker-compose.dev.yml build --no-cache
 
 # Start development environment (explicit)
 dev: docker-start check-env
