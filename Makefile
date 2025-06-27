@@ -77,6 +77,9 @@ setup:
 build-dev: docker-start
 	docker-compose -f docker-compose.dev.yml build --no-cache
 
+build-prod: docker-start
+	docker-compose -f docker-compose.prod.yml build --no-cache
+
 # Start development environment (explicit)
 dev: docker-start check-env
 	@echo "Starting development environment..."
