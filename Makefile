@@ -104,8 +104,11 @@ down-prod:
 	docker-compose -f docker-compose.prod.yml down
 
 # Restart all services
-restart: docker-start
+restart-dev: docker-start
 	docker-compose -f docker-compose.dev.yml restart
+
+restart-prod: docker-start
+	docker-compose -f docker-compose.prod.yml restart
 
 # Show logs
 logs:
